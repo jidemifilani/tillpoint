@@ -1,0 +1,64 @@
+/* ==================================================================
+   TillPoint - print stylesheet
+   Two jobs: an 80mm thermal receipt, and A4 for reports an auditor
+   signs. Chrome is removed in both cases - a printed report with a
+   navigation sidebar down the side is not a document.
+   ================================================================== */
+
+@page { margin: 12mm; }
+
+body { background: #fff; color: #000; font-size: 11pt; }
+
+.sidebar, .topbar, .foot, .btn, .btn-row, .filters, .pager,
+.bell, .storepick, .skip, .keypad, .quick, .lookup, .no-print {
+  display: none !important;
+}
+
+.shell { margin-left: 0 !important; }
+.main  { padding: 0 !important; max-width: none !important; }
+
+.card {
+  border: 1px solid #999; box-shadow: none; break-inside: avoid;
+  margin-bottom: 8mm;
+}
+.card__head { border-bottom: 1px solid #999; padding: 3mm 4mm; }
+.card__body { padding: 4mm; }
+
+.tiles { grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+.tile  { border: 1px solid #999; box-shadow: none; padding: 3mm; break-inside: avoid; }
+
+table.data { font-size: 9.5pt; }
+table.data thead th {
+  background: #eee !important; color: #000; position: static;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+table.data thead { display: table-header-group; }   /* repeat headings per page */
+table.data tr { break-inside: avoid; }
+
+.badge {
+  border: 1px solid #666; background: none !important; color: #000 !important;
+}
+.alert { border: 1px solid #666; background: none !important; }
+
+/* A line for a signature, on anything an auditor has to sign off. */
+.sign-off {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10mm;
+  margin-top: 12mm; break-inside: avoid;
+}
+.sign-off div { border-top: 1px solid #000; padding-top: 2mm; font-size: 9pt; }
+
+/* ---- Thermal receipt ------------------------------------------- */
+/* Driven by the .receipt-page class on <body> in pos/receipt.php.  */
+body.receipt-page { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 9pt; }
+body.receipt-page .receipt {
+  max-width: none; width: 72mm; border: 0; padding: 0; margin: 0;
+  border-radius: 0;
+}
+body.receipt-page .receipt hr { border-top: 1px dashed #000; }
+
+@media print {
+  body.receipt-page { margin: 0; }
+  /* 80mm roll, continuous: height auto so the paper cuts after the last line
+     instead of ejecting a full page. */
+  @page { size: 80mm auto; margin: 3mm; }
+}

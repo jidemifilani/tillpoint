@@ -1,0 +1,42 @@
+# TillPoint - clean URLs + basic hardening
+Options -Indexes
+DirectoryIndex index.php index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /tillpoint/
+
+  # Never rewrite real files or directories.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # /inventory/products  ->  /inventory/products.php
+  RewriteCond %{REQUEST_FILENAME}.php -f
+  RewriteRule ^(.*)$ $1.php [L]
+
+  # /inventory  ->  /inventory/index.php
+  RewriteCond %{REQUEST_FILENAME}/index.php -f
+  RewriteRule ^(.*)$ $1/index.php [L]
+</IfModule>
+
+# Nothing outside the document tree should be fetchable even if the rewrite
+# rules above are not loaded.
+<FilesMatch "\.(sql|md|log|ini|json|lock)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
+ErrorDocument 403 /tillpoint/403.php
+ErrorDocument 404 /tillpoint/404.php

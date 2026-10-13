@@ -1,0 +1,40 @@
+# ---- Credentials and local configuration ----------------------------
+# config.php holds the database user and password. Commit an example
+# instead and keep the real one out of history - a credential in a git
+# history is a credential that has to be rotated, not deleted.
+/config/config.php
+
+# ---- Installation state ---------------------------------------------
+# The sentinel is per-deployment, not part of the source.
+/.installed
+
+# ---- Evidence that must not be rewritten ----------------------------
+# The head-hash log is the external proof of the audit chain. It belongs
+# in a backup, not in the repository: committing it would let anyone who
+# can force-push rewrite the very record it exists to protect.
+/database/integrity/
+
+# ---- Generated and uploaded content ---------------------------------
+/assets/uploads/
+*.log
+
+# ---- Database dumps -------------------------------------------------
+# Never commit a dump: it contains real customer data, real staff
+# records, and password hashes.
+*.sql.gz
+*.sql.bak
+/database/backups/
+backup-*.sql
+
+# ---- Editor and OS noise --------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
+
+# ---- Dependency directories, if any are ever added ------------------
+/vendor/
+/node_modules/
