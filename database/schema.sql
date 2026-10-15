@@ -1046,3 +1046,74 @@ CREATE TABLE IF NOT EXISTS notifications (
   KEY idx_notif_role (role_code, read_at),
   KEY idx_notif_time (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------------------------
+-- Supplier invoices / three-way match (ORDER vs RECEIPT vs INVOICE)
+-- -------------------------------------------------------------------------
+
+-- The missing third leg of the match. Without this nothing checks what the
+-- supplier actually billed against what was ordered and what arrived.
+CREATE TABLE IF NOT EXISTS supplier_invoices (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  our_ref       VARCHAR(30)  NOT NULL COMMENT 'our own reference, from number_sequences',
+  invoice_no    VARCHAR(60)  NOT NULL COMMENT 'the number the SUPPLIER put on it',
+  supplier_id   INT UNSIGNED NOT NULL,
+  store_id      INT UNSIGNED NOT NULL,
+  invoice_date  DATE         NOT NULL,
+  due_date      DATE         NULL,
+  subtotal      DECIMAL(14,2) NOT NULL DEFAULT 0,
+  vat_total     DECIMAL(14,2) NOT NULL DEFAULT 0,
+  total         DECIMAL(14,2) NOT NULL DEFAULT 0,
+  status        ENUM('draft','matched','disputed','approved','paid','cancelled')
+                NOT NULL DEFAULT 'draft',
+  match_status  ENUM('unmatched','clean','variance') NOT NULL DEFAULT 'unmatched',
+  price_variance DECIMAL(14,2) NOT NULL DEFAULT 0 COMMENT 'billed less agreed',
+  qty_variance   DECIMAL(14,2) NOT NULL DEFAULT 0 COMMENT 'billed less received, at cost',
+  note          VARCHAR(500) NULL,
+  dispute_note  VARCHAR(500) NULL,
+  entered_by    INT UNSIGNED NOT NULL,
+  approved_by   INT UNSIGNED NULL,
+  approved_at   DATETIME     NULL,
+  paid_at       DATETIME     NULL,
+  created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_si_ref (our_ref),
+  -- The control that stops the same invoice being paid twice.
+  UNIQUE KEY uq_si_supplier_number (supplier_id, invoice_no),
+  KEY idx_si_status (status),
+  KEY idx_si_match (match_status),
+  KEY idx_si_store_date (store_id, invoice_date),
+  KEY idx_si_due (due_date, status),
+  CONSTRAINT fk_si_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers (id),
+  CONSTRAINT fk_si_store    FOREIGN KEY (store_id)    REFERENCES stores (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Invoice lines, each pointing at the delivery line it claims to bill for.
+CREATE TABLE IF NOT EXISTS supplier_invoice_lines (
+  id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  invoice_id   BIGINT UNSIGNED NOT NULL,
+  grn_line_id  BIGINT UNSIGNED NULL COMMENT 'the delivery line this bills for; NULL = billed for nothing we received',
+  product_id   INT UNSIGNED NULL COMMENT 'NULL for a charge that is not a product, e.g. delivery',
+  description  VARCHAR(160) NOT NULL,
+  qty          DECIMAL(12,3) NOT NULL DEFAULT 0,
+  unit_cost    DECIMAL(14,4) NOT NULL DEFAULT 0,
+  vat_rate     DECIMAL(6,4) NOT NULL DEFAULT 0,
+  line_total   DECIMAL(14,2) NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  KEY idx_sil_invoice (invoice_id),
+  KEY idx_sil_grnline (grn_line_id),
+  KEY idx_sil_product (product_id),
+  CONSTRAINT fk_sil_invoice FOREIGN KEY (invoice_id) REFERENCES supplier_invoices (id) ON DELETE CASCADE,
+  CONSTRAINT fk_sil_grnline FOREIGN KEY (grn_line_id) REFERENCES grn_lines (id) ON DELETE SET NULL,
+  CONSTRAINT fk_sil_product FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Join table: one invoice can cover several deliveries; one delivery can be
+-- split across invoices.
+CREATE TABLE IF NOT EXISTS supplier_invoice_grns (
+  invoice_id BIGINT UNSIGNED NOT NULL,
+  grn_id     BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (invoice_id, grn_id),
+  CONSTRAINT fk_sig_invoice FOREIGN KEY (invoice_id) REFERENCES supplier_invoices (id) ON DELETE CASCADE,
+  CONSTRAINT fk_sig_grn     FOREIGN KEY (grn_id)     REFERENCES grns (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

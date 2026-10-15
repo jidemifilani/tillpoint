@@ -245,9 +245,6 @@ tell you which are outstanding.
 
 Honest list of what is missing, so nobody goes looking:
 
-- **Supplier invoices and three-way match.** `grn_post()` flags cost variance
-  against the purchase order, but there is no invoice entity, so nothing checks
-  what the supplier actually billed. The commonest purchasing leak.
 - **Self-service password reset.** The schema columns exist
   (`password_reset_token`, `password_reset_expires`) and nothing uses them yet;
   an administrator must reset a password.
